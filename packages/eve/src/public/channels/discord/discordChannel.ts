@@ -45,8 +45,8 @@ import {
   discordJsonBody,
   readMessageContent,
 } from "#public/channels/discord/responses.js";
-import { type DiscordWebhookVerifier } from "#public/channels/discord/verify.js";
 import { verifyDiscordInbound } from "#public/channels/discord/verifyInbound.js";
+import type { WebhookVerifier } from "#public/channels/webhook.js";
 import { readNonEmptyString } from "#shared/guards.js";
 import { parseJsonObject, type JsonObject } from "#shared/json.js";
 import { defineChannel, POST, type Channel } from "#public/definitions/channel.js";
@@ -92,7 +92,7 @@ export interface DiscordChannelState {
 /** Discord channel credentials. */
 export interface DiscordChannelCredentials extends DiscordCredentials {
   /** Custom inbound webhook verifier. When supplied, eve skips the `DISCORD_PUBLIC_KEY` fallback and delegates verification to it. */
-  readonly webhookVerifier?: DiscordWebhookVerifier;
+  readonly webhookVerifier?: WebhookVerifier;
 }
 
 /** Target accepted by `receive(discord, { target })` for proactive sessions. */

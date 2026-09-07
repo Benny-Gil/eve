@@ -52,4 +52,3 @@ export {
   type GitHubPullRequestContextConfig,
 } from "#public/channels/github/pr-context.js";
 export { type GitHubChannelState } from "#public/channels/github/state.js";
-export { type GitHubWebhookVerifier } from "#public/channels/github/verify.js";

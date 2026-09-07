@@ -57,7 +57,8 @@ import {
   type TeamsInvokeActivity,
   type TeamsMessageActivity,
 } from "#public/channels/teams/inbound.js";
-import { verifyTeamsRequest, type TeamsWebhookVerifier } from "#public/channels/teams/verify.js";
+import { verifyTeamsRequest } from "#public/channels/teams/verify.js";
+import type { WebhookVerifier } from "#public/channels/webhook.js";
 import { readNonEmptyString } from "#shared/guards.js";
 import { parseJsonObject, type JsonObject } from "#shared/json.js";
 import { defineChannel, POST, type Channel } from "#public/definitions/channel.js";
@@ -118,7 +119,7 @@ export interface TeamsChannelState {
 /** Teams channel credentials. */
 export interface TeamsChannelCredentials extends TeamsCredentials {
   /** Custom inbound webhook verifier. When supplied, replaces Bot Connector JWT validation. */
-  readonly webhookVerifier?: TeamsWebhookVerifier;
+  readonly webhookVerifier?: WebhookVerifier;
 }
 
 /**

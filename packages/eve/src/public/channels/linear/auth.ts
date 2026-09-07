@@ -6,6 +6,8 @@
  * GraphQL API to emit Agent Activities.
  */
 
+import type { WebhookVerifier } from "#public/channels/webhook.js";
+
 export type LinearAccessToken = string | (() => string | Promise<string>);
 export type LinearWebhookSecret = string | (() => string | Promise<string>);
 
@@ -18,7 +20,7 @@ export interface LinearChannelCredentials {
   /** Signing secret from the Linear webhook configuration. */
   readonly webhookSecret?: LinearWebhookSecret;
   /** Optional custom verifier for trusted webhook forwarders. */
-  readonly webhookVerifier?: import("#public/channels/linear/verify.js").LinearWebhookVerifier;
+  readonly webhookVerifier?: WebhookVerifier;
 }
 
 export async function resolveLinearAccessToken(

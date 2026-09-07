@@ -118,5 +118,4 @@ export {
   verifyTeamsRequest,
   type TeamsJwtVerifyOptions,
   type TeamsVerifyOptions,
-  type TeamsWebhookVerifier,
 } from "#public/channels/teams/verify.js";

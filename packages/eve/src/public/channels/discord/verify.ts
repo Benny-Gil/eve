@@ -9,6 +9,11 @@
 import { createPublicKey, verify } from "node:crypto";
 
 import { createLogger } from "#internal/logging.js";
+import {
+  runWebhookVerifier,
+  verifyWebhookTimestamp,
+  type WebhookVerifier,
+} from "#public/channels/webhook.js";
 
 const log = createLogger("discord.verify");
 
@@ -17,21 +22,11 @@ const ED25519_SPKI_PREFIX = Buffer.from("302a300506032b6570032100", "hex");
 /** Discord application public key, materialized directly or from an async secret provider. */
 export type DiscordPublicKey = string | (() => string | Promise<string>);
 
-/**
- * Caller-supplied inbound webhook verifier. Replaces Ed25519 verification
- * when an integration authenticates forwarded webhooks before they reach
- * eve. Receives the request and raw body.
- *
- * Return a falsy value to reject the request. Return a string to accept it
- * and use that string as the (possibly rewritten) body. Return any other
- * truthy value to accept it and keep the original body.
- */
-export type DiscordWebhookVerifier = (request: Request, body: string) => unknown | Promise<unknown>;
-
 /** Options for {@link verifyDiscordRequest}. */
 export interface DiscordVerifyOptions {
   readonly publicKey: DiscordPublicKey | undefined;
-  readonly webhookVerifier?: DiscordWebhookVerifier;
+  /** Replaces the Ed25519 and timestamp checks, for example behind a trusted proxy. */
+  readonly webhookVerifier?: WebhookVerifier;
   /** Max allowed clock skew, in seconds. Defaults to 5 minutes. */
   readonly maxSkewSeconds?: number;
 }
@@ -56,11 +51,11 @@ export async function verifyDiscordRequest(
   const body = await request.text();
 
   if (options.webhookVerifier !== undefined) {
-    const result = await options.webhookVerifier(request, body);
-    if (!result) {
+    const verified = await runWebhookVerifier(options.webhookVerifier, request, body);
+    if (verified === null) {
       throw new Error("discordChannel: inbound webhook verifier rejected the request.");
     }
-    return typeof result === "string" ? result : body;
+    return verified;
   }
 
   const publicKey = await resolveDiscordPublicKey(options.publicKey);
@@ -75,9 +70,13 @@ export async function verifyDiscordRequest(
     throw new Error("discordChannel: inbound request has malformed timestamp.");
   }
 
-  const maxSkew = options.maxSkewSeconds ?? 60 * 5;
-  const now = Math.floor(Date.now() / 1000);
-  if (Math.abs(now - timestampSeconds) > maxSkew) {
+  const maxSkewSeconds = options.maxSkewSeconds ?? 60 * 5;
+  if (
+    !verifyWebhookTimestamp({
+      maxSkewMs: maxSkewSeconds * 1000,
+      timestampMs: timestampSeconds * 1000,
+    })
+  ) {
     throw new Error("discordChannel: inbound request timestamp outside allowed skew.");
   }
 

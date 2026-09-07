@@ -7,34 +7,20 @@
  * delegates to a caller-supplied verifier for forwarded webhooks.
  */
 
-import { timingSafeEqual } from "node:crypto";
-
-import { createLogger } from "#internal/logging.js";
-
-const log = createLogger("telegram.verify");
+import {
+  constantTimeCompare,
+  runWebhookVerifier,
+  type WebhookVerifier,
+} from "#public/channels/webhook.js";
 
 /** Secret token you set on Telegram's `setWebhook` call. */
 export type TelegramWebhookSecretToken = string | (() => string | Promise<string>);
 
-/**
- * Caller-supplied inbound webhook verifier. Use it instead of
- * Telegram's secret-token header when an integration authenticates
- * forwarded webhooks before they reach eve.
- *
- * The return value selects how the channel handles the request: return a
- * falsy value to reject the request, a string to accept it and use that
- * string as the verified body, or any other truthy value to accept it and
- * keep the original body.
- */
-export type TelegramWebhookVerifier = (
-  request: Request,
-  body: string,
-) => unknown | Promise<unknown>;
-
 /** Options for {@link verifyTelegramRequest}. */
 export interface TelegramVerifyOptions {
   readonly secretToken: TelegramWebhookSecretToken | undefined;
-  readonly webhookVerifier?: TelegramWebhookVerifier;
+  /** Replaces the secret-token check, for example behind a trusted proxy. */
+  readonly webhookVerifier?: WebhookVerifier;
 }
 
 /** Resolves a Telegram webhook secret, falling back to `TELEGRAM_WEBHOOK_SECRET_TOKEN`. */
@@ -59,11 +45,11 @@ export async function verifyTelegramRequest(
   const body = await request.text();
 
   if (options.webhookVerifier !== undefined) {
-    const result = await options.webhookVerifier(request, body);
-    if (!result) {
+    const verified = await runWebhookVerifier(options.webhookVerifier, request, body);
+    if (verified === null) {
       throw new Error("telegramChannel: inbound webhook verifier rejected the request.");
     }
-    return typeof result === "string" ? result : body;
+    return verified;
   }
 
   const secretToken = await resolveTelegramWebhookSecretToken(options.secretToken);
@@ -75,14 +61,4 @@ export async function verifyTelegramRequest(
     throw new Error("telegramChannel: inbound request secret-token mismatch.");
   }
   return body;
-}
-
-function constantTimeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  try {
-    return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-  } catch (error) {
-    log.debug("timingSafeEqual threw", { error });
-    return false;
-  }
 }

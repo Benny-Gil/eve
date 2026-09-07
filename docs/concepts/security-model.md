@@ -68,7 +68,7 @@ A [channel](../channels/overview) is your agent's front door, so authenticating 
   claims. A body field is attacker-controlled; treating it as identity is
   cross-user impersonation.
 
-A custom channel that accepts dashboard-style webhooks should follow the same shape: authenticate the raw body with an HMAC, compare signatures in constant time, and trust any body-supplied principal only after the signature verifies.
+A custom channel that accepts dashboard-style webhooks should follow the same shape: authenticate the raw body with an HMAC, compare signatures in constant time, and trust any body-supplied principal only after the signature verifies. `eve/channels/webhook` exports the primitives the built-in channels compose; see [Verify inbound webhooks](../channels/custom#verify-inbound-webhooks).
 
 ## Authored markdown is data
 

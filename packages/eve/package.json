@@ -353,6 +353,11 @@
       "import": "./dist/src/public/channels/auth.js",
       "default": "./dist/src/public/channels/auth.js"
     },
+    "./channels/webhook": {
+      "types": "./dist/src/public/channels/webhook.d.ts",
+      "import": "./dist/src/public/channels/webhook.js",
+      "default": "./dist/src/public/channels/webhook.js"
+    },
     "./channels/mcp": {
       "types": "./dist/src/public/channels/mcp.d.ts",
       "import": "./dist/src/public/channels/mcp.js",

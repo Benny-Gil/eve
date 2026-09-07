@@ -94,5 +94,4 @@ export {
   verifyDiscordSignature,
   type DiscordPublicKey,
   type DiscordVerifyOptions,
-  type DiscordWebhookVerifier,
 } from "#public/channels/discord/verify.js";

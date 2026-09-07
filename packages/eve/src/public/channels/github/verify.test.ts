@@ -1,10 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  signGitHubWebhookBody,
-  verifyGitHubRequest,
-  type GitHubWebhookVerifier,
-} from "#public/channels/github/verify.js";
+import { signGitHubWebhookBody, verifyGitHubRequest } from "#public/channels/github/verify.js";
+import type { WebhookVerifier } from "#public/channels/webhook.js";
 
 const SECRET = "github-secret";
 
@@ -62,7 +59,7 @@ describe("verifyGitHubRequest", () => {
 
 describe("verifyGitHubRequest — caller-supplied verifier path", () => {
   it("delegates to webhookVerifier and skips the HMAC check", async () => {
-    const verifier = vi.fn<GitHubWebhookVerifier>(async () => true);
+    const verifier = vi.fn<WebhookVerifier>(async () => true);
     const body = JSON.stringify({ action: "created" });
     const req = jsonRequest(body);
 
@@ -83,7 +80,7 @@ describe("verifyGitHubRequest — caller-supplied verifier path", () => {
   });
 
   it("rejects when webhookVerifier returns null (Connect's vercelOidc rejection path)", async () => {
-    const verifier = vi.fn<GitHubWebhookVerifier>(async () => null);
+    const verifier = vi.fn<WebhookVerifier>(async () => null);
 
     await expect(
       verifyGitHubRequest(jsonRequest("{}"), { webhookVerifier: verifier }),
@@ -92,7 +89,7 @@ describe("verifyGitHubRequest — caller-supplied verifier path", () => {
 
   it("rejects when webhookVerifier returns false / undefined / empty string / 0", async () => {
     for (const value of [false, undefined, "", 0]) {
-      const verifier = vi.fn<GitHubWebhookVerifier>(async () => value);
+      const verifier = vi.fn<WebhookVerifier>(async () => value);
 
       await expect(
         verifyGitHubRequest(jsonRequest("{}"), { webhookVerifier: verifier }),
@@ -102,7 +99,7 @@ describe("verifyGitHubRequest — caller-supplied verifier path", () => {
 
   it("substitutes the body when webhookVerifier returns a string", async () => {
     const canonicalized = '{"action":"created","canonicalized":true}';
-    const verifier = vi.fn<GitHubWebhookVerifier>(async () => canonicalized);
+    const verifier = vi.fn<WebhookVerifier>(async () => canonicalized);
 
     await expect(
       verifyGitHubRequest(jsonRequest('{"action":"created"}'), { webhookVerifier: verifier }),
@@ -110,7 +107,7 @@ describe("verifyGitHubRequest — caller-supplied verifier path", () => {
   });
 
   it("prefers the verifier over an available webhook secret and never reads it", async () => {
-    const verifier = vi.fn<GitHubWebhookVerifier>(async () => true);
+    const verifier = vi.fn<WebhookVerifier>(async () => true);
     const body = "{}";
     // Signature is wrong for SECRET, but the verifier path must not HMAC.
     const req = signedRequest(body, "sha256=bad");

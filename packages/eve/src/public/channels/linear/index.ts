@@ -57,8 +57,4 @@ export {
   type LinearReceiveTarget,
   type LinearSessionContext,
 } from "#public/channels/linear/linearChannel.js";
-export {
-  signLinearWebhookBody,
-  type LinearVerifyOptions,
-  type LinearWebhookVerifier,
-} from "#public/channels/linear/verify.js";
+export { signLinearWebhookBody, type LinearVerifyOptions } from "#public/channels/linear/verify.js";

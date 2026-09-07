@@ -94,5 +94,4 @@ export {
   verifyTelegramRequest,
   type TelegramVerifyOptions,
   type TelegramWebhookSecretToken,
-  type TelegramWebhookVerifier,
 } from "#public/channels/telegram/verify.js";

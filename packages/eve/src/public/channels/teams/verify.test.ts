@@ -1,11 +1,8 @@
 import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  verifyTeamsJwt,
-  verifyTeamsRequest,
-  type TeamsWebhookVerifier,
-} from "#public/channels/teams/verify.js";
+import { verifyTeamsJwt, verifyTeamsRequest } from "#public/channels/teams/verify.js";
+import type { WebhookVerifier } from "#public/channels/webhook.js";
 
 describe("Teams request verification", () => {
   it("verifies Bot Connector JWTs from JWKS", async () => {
@@ -53,7 +50,7 @@ describe("Teams request verification", () => {
   });
 
   it("delegates to a custom webhook verifier", async () => {
-    const verifier: TeamsWebhookVerifier = vi.fn((_req, body) => body.replace("old", "new"));
+    const verifier: WebhookVerifier = vi.fn((_req, body) => body.replace("old", "new"));
     await expect(
       verifyTeamsRequest(new Request("https://eve.test/teams", { body: "old", method: "POST" }), {
         webhookVerifier: verifier,

@@ -166,6 +166,74 @@ Control operations never create a session. Unknown or inactive targets return a
 benign no-active status. Authenticate and deduplicate command webhooks before
 calling `reset`, because a delayed duplicate can retire a newer address owner.
 
+## Verify inbound webhooks
+
+A platform signs each webhook so your channel can reject forged requests. Read the raw body before you parse it, because the platform signed those exact bytes, and compare the signature in constant time. `eve/channels/webhook` exports the primitives that eve's built-in channels compose:
+
+```ts title="agent/channels/acme.ts"
+import { defineChannel, POST } from "eve/channels";
+import { verifyHmacSha256, verifyWebhookTimestamp } from "eve/channels/webhook";
+
+export default defineChannel({
+  routes: [
+    POST("/acme/webhook", async (request, { from }) => {
+      const secret = process.env.ACME_WEBHOOK_SECRET;
+      if (!secret) throw new Error("ACME_WEBHOOK_SECRET is required.");
+
+      const body = await request.text();
+      const timestamp = request.headers.get("x-acme-timestamp") ?? "";
+      const signature = request.headers.get("x-acme-signature") ?? "";
+
+      const signed = verifyHmacSha256({ payload: `${timestamp}.${body}`, secret, signature });
+      const fresh = verifyWebhookTimestamp({
+        timestampMs: Number(timestamp) * 1000,
+        maxSkewMs: 5 * 60_000,
+      });
+      if (!signed || !fresh) return new Response(null, { status: 401 });
+
+      const event = JSON.parse(body);
+      await from(event.threadId).send(event.text, { auth: null });
+      return new Response(null, { status: 202 });
+    }),
+  ],
+});
+```
+
+- `constantTimeCompare(a, b)` compares two secrets without leaking which byte differs. Use it for a shared token that arrives in a header.
+- `verifyHmacSha256({ payload, secret, signature, prefix?, encoding? })` recomputes the digest over the signed bytes and compares it in constant time. Set `prefix` when the platform writes `sha256=` before the digest, and `encoding: "base64"` when the platform does not use hex.
+- `verifyWebhookTimestamp({ timestampMs, maxSkewMs, now? })` bounds the replay window. It returns `false` for a missing or malformed timestamp. Sign the timestamp together with the body, as the example does, so a replayed request cannot carry a fresh timestamp.
+- `signHmacSha256(payload, secret, encoding?)` signs fixtures in tests.
+
+Each primitive returns a result and never throws on untrusted input, so the route owns the response. See the [security model](../concepts/security-model) for the wider rules: verify the raw body, never trust a body-supplied principal, and keep secrets out of the sandbox.
+
+### Custom verifiers for built-in channels
+
+The built-in platform channels such as Slack, GitHub, Linear, Discord, Teams, and Telegram accept a `webhookVerifier` credential. eve calls it instead of the platform signature check, for example when Vercel Connect or another trusted proxy authenticates the request before it reaches eve. The verifier receives the request and the raw body, and its return value decides the outcome:
+
+| Verifier result                           | Effect                                                      |
+| ----------------------------------------- | ----------------------------------------------------------- |
+| Throws, rejects, or returns a falsy value | eve answers 401 and drops the request.                      |
+| Returns a string                          | eve accepts the request and parses that string as the body. |
+| Returns any other truthy value            | eve accepts the request and parses the raw body.            |
+
+A custom verifier replaces every built-in check, including the timestamp policy, so it must enforce its own. `WebhookVerifier` is the shared type for that callback, and `runWebhookVerifier` applies the same rules when your own channel factory accepts one:
+
+```ts
+import { runWebhookVerifier, type WebhookVerifier } from "eve/channels/webhook";
+
+export async function verifyAcmeRequest(
+  request: Request,
+  verifier: WebhookVerifier,
+): Promise<string> {
+  const body = await request.text();
+  const verified = await runWebhookVerifier(verifier, request, body);
+  if (verified === null) {
+    throw new Error("acmeChannel: inbound webhook verifier rejected the request.");
+  }
+  return verified;
+}
+```
+
 ## CORS
 
 Custom HTTP channels leave CORS untouched unless you opt in. Pass `cors: true`

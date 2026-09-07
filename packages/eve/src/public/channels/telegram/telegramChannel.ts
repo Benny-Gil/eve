@@ -64,8 +64,8 @@ import {
 import {
   verifyTelegramRequest,
   type TelegramWebhookSecretToken,
-  type TelegramWebhookVerifier,
 } from "#public/channels/telegram/verify.js";
+import type { WebhookVerifier } from "#public/channels/webhook.js";
 import { defineChannel, POST, type Channel } from "#public/definitions/channel.js";
 import { telegramInstrumentationMetadata } from "#public/channels/telegram/audience.js";
 import { parseJsonObject, type JsonObject } from "#shared/json.js";
@@ -110,7 +110,7 @@ export interface TelegramChannelState extends TelegramHitlState {
 export interface TelegramChannelCredentials extends TelegramCredentials {
   /** Webhook secret token configured via setWebhook. Falls back to `TELEGRAM_WEBHOOK_SECRET_TOKEN` when neither this nor `webhookVerifier` is set. */
   readonly webhookSecretToken?: TelegramWebhookSecretToken;
-  readonly webhookVerifier?: TelegramWebhookVerifier;
+  readonly webhookVerifier?: WebhookVerifier;
 }
 
 /** Target for `receive(telegram, { target })` proactive sessions. `chatId` is required. `conversationId` resumes an existing thread; `initialMessage` posts a seed message and starts a new thread from it. The two are mutually exclusive: supplying both throws. */

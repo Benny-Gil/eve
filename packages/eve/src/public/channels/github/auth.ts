@@ -2,7 +2,7 @@ import { createSign } from "node:crypto";
 
 import { createLogger } from "#internal/logging.js";
 import { isObject } from "#shared/guards.js";
-import type { GitHubWebhookVerifier } from "#public/channels/github/verify.js";
+import type { WebhookVerifier } from "#public/channels/webhook.js";
 
 const log = createLogger("github.auth");
 
@@ -61,7 +61,7 @@ export interface GitHubChannelCredentials {
    * function. Integrations such as Connect authenticate webhooks
    * out-of-band and set this field.
    */
-  readonly webhookVerifier?: GitHubWebhookVerifier;
+  readonly webhookVerifier?: WebhookVerifier;
 }
 
 /** Options needed by GitHub App auth helpers. */

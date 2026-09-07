@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  verifyTelegramRequest,
-  type TelegramWebhookVerifier,
-} from "#public/channels/telegram/verify.js";
+import { verifyTelegramRequest } from "#public/channels/telegram/verify.js";
+import type { WebhookVerifier } from "#public/channels/webhook.js";
 
 describe("verifyTelegramRequest", () => {
   it("returns the raw body when the secret-token header matches", async () => {
@@ -38,7 +36,7 @@ describe("verifyTelegramRequest", () => {
   });
 
   it("delegates to a custom verifier and can substitute the body", async () => {
-    const verifier: TelegramWebhookVerifier = vi.fn(() => '{"ok":true}');
+    const verifier: WebhookVerifier = vi.fn(() => '{"ok":true}');
     const request = new Request("https://example.com/eve/v1/telegram", {
       body: "{}",
       method: "POST",

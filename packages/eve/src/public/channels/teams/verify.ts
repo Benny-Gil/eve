@@ -11,6 +11,7 @@ import { importJWK, jwtVerify } from "#compiled/jose/index.js";
 
 import { createLogger } from "#internal/logging.js";
 import { resolveTeamsAppId, type TeamsAppId, type TeamsFetch } from "#public/channels/teams/api.js";
+import { runWebhookVerifier, type WebhookVerifier } from "#public/channels/webhook.js";
 import { isObject } from "#shared/guards.js";
 
 const log = createLogger("teams.verify");
@@ -18,17 +19,6 @@ const log = createLogger("teams.verify");
 const DEFAULT_BOT_CONNECTOR_OPENID_METADATA_URL =
   "https://login.botframework.com/v1/.well-known/openidconfiguration";
 const BOT_CONNECTOR_ISSUER = "https://api.botframework.com";
-
-/**
- * Caller-supplied inbound webhook verifier. Replaces Bot Connector JWT
- * verification when a trusted integration authenticates forwarded requests
- * before they reach eve.
- *
- * Return a falsy value to reject the request (verification throws), a string
- * to accept and use that string as the verified body, or any other truthy
- * value to accept and keep the original request body.
- */
-export type TeamsWebhookVerifier = (request: Request, body: string) => unknown | Promise<unknown>;
 
 /** Options for {@link verifyTeamsRequest}. */
 export interface TeamsVerifyOptions {
@@ -38,7 +28,8 @@ export interface TeamsVerifyOptions {
   /** Max allowed clock skew, in seconds. Defaults to 5 minutes. */
   readonly maxSkewSeconds?: number;
   readonly openIdMetadataUrl?: string;
-  readonly webhookVerifier?: TeamsWebhookVerifier;
+  /** Replaces the Bot Connector JWT check, for example behind a trusted proxy. */
+  readonly webhookVerifier?: WebhookVerifier;
 }
 
 /** Options for {@link verifyTeamsJwt}. */
@@ -67,11 +58,11 @@ export async function verifyTeamsRequest(
   const body = await request.text();
 
   if (options.webhookVerifier !== undefined) {
-    const result = await options.webhookVerifier(request, body);
-    if (!result) {
+    const verified = await runWebhookVerifier(options.webhookVerifier, request, body);
+    if (verified === null) {
       throw new Error("teamsChannel: inbound webhook verifier rejected the request.");
     }
-    return typeof result === "string" ? result : body;
+    return verified;
   }
 
   const authorization = request.headers.get("authorization") ?? "";
