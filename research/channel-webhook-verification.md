@@ -1,6 +1,6 @@
 ---
 issue: https://github.com/vercel/eve/issues/3106
-status: proposed
+status: implemented
 last_updated: "2026-09-07"
 ---
 
